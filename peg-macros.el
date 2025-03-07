@@ -108,6 +108,7 @@
 
 (defun peg--rule-add-funcall (args pexs)
   "pex 规则的参数才使用 funcall 调用，guard 的 elisp 表达式参数保持原样"
+  ;; 应该根据规则名确定是否加 funcall
   (let* ((plist (peg--rule-arg-plist args pexs))
          (pex-args (plist-get plist :pex-args)))
     (if pex-args

@@ -20,7 +20,7 @@
   (any-to-pex pex) (group pex))
 
 (define-peg-rule+ group-to-pex (pex)
-  ;; 从当前位置开始捕获，知道匹配 pex 前为止
+  ;; 从当前位置开始捕获，直到匹配 pex 前为止
   (group (any-to-pex pex)))
 
 (define-peg-rule+ any-to-point (pos)
