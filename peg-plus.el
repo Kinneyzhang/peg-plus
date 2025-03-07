@@ -4,6 +4,29 @@
 
 ;;; custom rules
 
+(defvar peg-group-data nil
+  "A plist data returned by last peg-run+.")
+
+(defun peg-group-data (prop)
+  (plist-get peg-group-data prop))
+
+(defun peg-group-beg (prop)
+  (nth 0 (peg-group-data prop)))
+
+(defun peg-group-end (prop)
+  (nth 1 (peg-group-data prop)))
+
+(defun peg-group-string (prop)
+  (nth 2 (peg-group-data prop)))
+
+;; (define-peg-rule group2 (pex prop)
+;;   (and `(-- (point)) (funcall pex) `(-- (point))
+;;        `(start end --
+;;                (let* ((string (buffer-substring start end))
+;;                       (data (list start end string)))
+;;                  (setq peg-group-data
+;;                        (append peg-group-data (list prop data)))))))
+
 (define-peg-rule+ group (pex)
   ;; 捕获 PEX 表达式分组，返回 (start string end)
   (list (region (substring pex))))

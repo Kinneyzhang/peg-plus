@@ -69,6 +69,8 @@
   (let (pex-args all-args name params)
     (--tree-map-nodes
      (when-let* ((_ (consp it))
+                 ;; 排除 action 列表
+                 (_ (not (eq 'backquote (car it))))
                  (rule-name (setq name (car it)))
                  ;; rule-params 是 peg-run 中规则实际使用的参数
                  (rule-params (setq params (cdr it)))
@@ -106,6 +108,7 @@
       (setq pexs (peg--rule-args-add-peg-1 pexs)))
     pexs))
 
+;; FIXME: 根据参数名匹配不靠谱，应该根据规则！
 (defun peg--rule-add-funcall (args pexs)
   "pex 规则的参数才使用 funcall 调用，guard 的 elisp 表达式参数保持原样"
   ;; 应该根据规则名确定是否加 funcall
@@ -123,7 +126,9 @@
 ;; peg+ 和 peg-run+ 中用到的 自定义规则，必须是由 define-peg-rule+ 定义的
 ;; 因为在判断参数是否为 exp 时，需要使用 (peg--rule-arg-plist args pexs) 函数
 ;; 该函数的 pexs 为规则定义表达式，在运行 peg-run+ 时需要通过规则的名称来获取
+;; 不允许透传参数
 
+;; FIXME: 排除 action 列表的处理
 (defmacro define-peg-rule+ (name args &rest pexs)
   ;; define-peg-rule 如果有参数，参数使用时用 funcall 调用；
   ;; 如果自定义的规则有参数，在所有参数加上 peg 生成 peg-matcher
