@@ -39,6 +39,7 @@
 ;;     (setq pex (funcall fun pex)))
 ;;   (when (and (consp pex) (consp (cdr pex)))
 ;;     (setq pex (-map (lambda (x)
+
 ;;                       (peg--map-pex pred fun x))
 ;;                     pex)))
 ;;   pex)
