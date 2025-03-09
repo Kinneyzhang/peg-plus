@@ -5,145 +5,189 @@
 
 ;;; FIXME: 处理参数名可能和规则同名的问题
 
-(defun peg-rule-full-name (name)
-  (intern (concat "peg-rule " (symbol-name name))))
+;; (defun peg-rule-action-p (name)
+;;   (eq name (intern "`")))
 
-(defun peg--custom-rule-arglist (name)
-  "是自定义规则，且有参数，返回参数列表"
-  (when (symbolp name)
-    (let* ((rule-func (peg-rule-full-name name))
-           (arglist (help-function-arglist rule-func)))
-      (when (and (functionp rule-func)
-                 (consp arglist))
-        arglist))))
+;; (defun peg-rule-function-name (name)
+;;   (intern (concat "peg-rule " (symbol-name name))))
 
-(defun tree-has-elem-p (tree elem)
-  (let ((has-elem nil))
-    (--tree-map (when (eq it elem)
-                  (setq has-elem t))
-                tree)
-    has-elem))
+;; (defun peg-rule-built-in-p (name)
+;;   "判断规则 NAME 是否为内置规则"
+;;   (not (functionp (peg-rule-function-name name))))
 
-(defun peg--rule-has-guard-p (pexs)
-  "判断 PEXS 中是否有 guard"
-  (tree-has-elem-p pexs 'guard))
+;; (defun peg-rule-costom-p (name)
+;;   "判断规则 NAME 是否为自定义规则"
+;;   (functionp (peg-rule-function-name name)))
 
-(defun peg--rule-guard-exps (pexs)
-  "获取 PEXS 中所有 guard 规则的表达式列表"
-  (let (guard-exps)
-    (--tree-map-nodes
-     (and (consp it)
-          (eq (car it) 'guard))
-     (push (cadr it) guard-exps)
-     pexs)
-    guard-exps))
+;; (defun peg-rule-args (name)
+;;   "返回规则 NAME 的参数列表"
+;;   (when (symbolp name)
+;;     (let* ((func (peg-rule-function-name name))
+;;            (args (help-function-arglist func)))
+;;       (when (and (functionp func)
+;;                  (consp args))
+;;         args))))
 
-(defun peg--rule-arg-in-guard-p (arg pexs)
-  "判断参数 ARG 是否在 PEXS 的 guard 规则内"
-  (let ((exps (peg--rule-guard-exps pexs)))
-    (tree-has-elem-p exps arg)))
+;; (defun peg-rule-body (name)
+;;   "返回规则 NAME 的规则定义"
+;;   (or (function-get (peg-rule-function-name name) :peg-body)
+;;       (error "PEG rule '%s' is not defined by `define-peg-rule+'"
+;;              name)))
 
-(defun peg--rule-arg-plist (args pexs)
-  "根据参数是否在 guard 里面分类参数，形成 plist"
-  (let (pex-args exp-args)
-    ;; 判断 PEXS 中是否有 guard，没有则参数属于 pex-args
-    ;; 否则，参数在 guard 内使用的属于 exp-args
-    ;; pex-args 需要使用 funcall 调用
-    ;; exp-args 无需使用 funcall 调用
-    (if (peg--rule-has-guard-p pexs)
-        (progn
-          (dolist (arg args)
-            (if (peg--rule-arg-in-guard-p arg pexs)
-                (push arg exp-args)
-              (push arg pex-args)))
-          (list :pex-args pex-args :exp-args exp-args))
-      (list :pex-args args :exp-args nil))))
+;; (defun peg--map-pex (pred fun pex)
+;;   (when (funcall pred pex)
+;;     (setq pex (funcall fun pex)))
+;;   (when (and (consp pex) (consp (cdr pex)))
+;;     (setq pex (-map (lambda (x)
+;;                       (peg--map-pex pred fun x))
+;;                     pex)))
+;;   pex)
 
-(defun peg--rule-tree-depth (tree)
-  (cond
-   ((not (listp tree)) 0)
-   ((null tree) 1)
-   (t (1+ (apply #'max 0 (mapcar #'peg--rule-tree-depth tree))))))
+;; ;; (peg-map-pexs
+;; ;;  (numberp it)
+;; ;;  (format "%s" it)
+;; ;;  '((1 2 (x y 4) (v 7 8))))
 
-(defun peg--rule-args-add-peg-1 (pexs)
-  (let (pex-args all-args name params)
-    (--tree-map-nodes
-     (when-let* ((_ (consp it))
-                 ;; 排除 action 列表
-                 (_ (not (eq 'backquote (car it))))
-                 (rule-name (setq name (car it)))
-                 ;; rule-params 是 peg-run 中规则实际使用的参数
-                 (rule-params (setq params (cdr it)))
-                 ;; args 是规则定义时的形式参数
-                 (args (setq all-args
-                             (peg--custom-rule-arglist rule-name)))
-                 ;; here is rule pexs, not peg-run pexs
-                 (plist (peg--rule-arg-plist
-                         ;; 获取 define-peg-rule+ 中存放的函数体
-                         args (function-get (peg-rule-full-name name)
-                                            :body))))
-       ;; 考虑自定义规则有多个参数的情况：
-       ;; 如果 args 中至少有一个 pex arg (需要加 peg)
-       ;; 并且 没有一个参数已经加上了 peg，则满足条件，给需要加的参数加上peg
-       ;; 否则其他情况，都不满足条件
-       (and (setq pex-args (plist-get plist :pex-args))
-            (--none? (when (consp it) (eq (car it) 'peg))
-                     rule-params)))
-     (cons name
-           ;; 给属于 pex-args 的 arg 加上 peg
-           ;; 获取 pex-args 在所有参数中的位置，
-           ;; 并给 rule-params 中对应位置的参数加上 peg
-           (let ((indexs (--map (-elem-index it all-args)
-                                pex-args)))
-             (--map-indexed
-              (if (member it-index indexs)
-                  (list 'peg it)
-                it)
-              params)))
-     pexs)))
+;; (defmacro peg-map-pexs (pred form pexs)
+;;   "Anaphoric form of `peg--map-pexs'."
+;;   (declare (debug (def-form def-form form)))
+;;   `(--map
+;;     (peg--map-pex (lambda (it) (ignore it) ,pred)
+;;                   (lambda (it) (ignore it) ,form)
+;;                   it)
+;;     ,pexs))
 
-(defun peg--rule-args-add-peg (pexs)
-  (let ((depth (peg--rule-tree-depth pexs)))
-    (dotimes (i (1- depth))
-      (setq pexs (peg--rule-args-add-peg-1 pexs)))
-    pexs))
+;; (defun peg--rule-arg-plist (name)
+;;   "根据参数列表处理规则的定义，返回一个 plist。
+;; :pex-args 是这个规则用于组成 pex 的参数列表；
+;; :exp-args 是用于 elisp 表达式中的参数列表(用于 guard 或 action 中)
+;; :new-pexs 是给需要的参数包裹了 funcall 的新的 pexs 表达式。"
+;;   (let* ((macro-args (peg-rule-args name))
+;;          (macro-pexs (peg-rule-body name))
+;;          (_ (progn
+;;               (elog-info "macro-args:" macro-args)
+;;               (elog-info "macro-pexs:" macro-pexs)
+;;               t))
+;;          all-pex-args curr-pex-args rule-name rule-params
+;;          (new-pexs
+;;           (--tree-map-nodes
+;;            (when-let* ((_ (and (consp it)
+;;                                (not (peg-rule-action-p it))))
+;;                        (name (setq rule-name (car it)))
+;;                        (_ (progn
+;;                             (elog-info "it:" it)
+;;                             (elog-info "name:" name)
+;;                             t))
+;;                        (params (setq rule-params (cdr it)))
+;;                        ;; 判断规则名
+;;                        ;; (_ (and (peg-rule-built-in-p name)
+;;                        ;;         (not (eq name 'guard))
+;;                        ;;         (not (eq name 'funcall))))
+;;                        ;; 参数至少有一个属于 macro-args
+;;                        (_ (setq curr-pex-args
+;;                                 (--filter (member it params)
+;;                                           macro-args))))
+;;              t)
+;;            (progn
+;;              (elog-info "curr-pex-args:" curr-pex-args)
+;;              (cons rule-name
+;;                    (--map (if (and (peg-rule-built-in-p name)
+;;                                    (not (eq name 'guard))
+;;                                    (not (eq name 'funcall))
+;;                                    (member it curr-pex-args))
+;;                               (progn
+;;                                 (add-to-list 'all-pex-args it)
+;;                                 (list 'funcall it))
+;;                             it)
+;;                           rule-params)))
+;;            macro-pexs)))
+;;     `( :pex-args ,all-pex-args
+;;        :exp-args ,(list-substract macro-args all-pex-args)
+;;        :new-pexs ,new-pexs)))
 
-;; FIXME: 根据参数名匹配不靠谱，应该根据规则！
-(defun peg--rule-add-funcall (args pexs)
-  "pex 规则的参数才使用 funcall 调用，guard 的 elisp 表达式参数保持原样"
-  ;; 应该根据规则名确定是否加 funcall
-  (let* ((plist (peg--rule-arg-plist args pexs))
-         (pex-args (plist-get plist :pex-args)))
-    (if pex-args
-        (--tree-map
-         (if (member it pex-args)
-             (list 'funcall it)
-           it)
-         pexs)
-      pexs)))
+;; (peg--rule-arg-plist 'any-to-point)
 
-;; 这三个宏要配合使用:
-;; peg+ 和 peg-run+ 中用到的 自定义规则，必须是由 define-peg-rule+ 定义的
-;; 因为在判断参数是否为 exp 时，需要使用 (peg--rule-arg-plist args pexs) 函数
-;; 该函数的 pexs 为规则定义表达式，在运行 peg-run+ 时需要通过规则的名称来获取
-;; 不允许透传参数
+;; (defun peg--rule-add-funcall (name)
+;;   "pex 规则的参数才使用 funcall 调用."
+;;   (plist-get (peg--rule-arg-plist name) :new-pexs))
 
-;; FIXME: 排除 action 列表的处理
-(defmacro define-peg-rule+ (name args &rest pexs)
-  ;; define-peg-rule 如果有参数，参数使用时用 funcall 调用；
-  ;; 如果自定义的规则有参数，在所有参数加上 peg 生成 peg-matcher
-  (declare (indent defun))
-  (let ((new-pexs (peg--rule-add-funcall
-                   args (peg--rule-args-add-peg pexs)))
-        (peg-func (peg-rule-full-name name)))
-    (function-put peg-func :body new-pexs)
-    `(define-peg-rule ,name ,args
-       ,@new-pexs)))
+;; ;; (defun peg--rule-tree-depth (tree)
+;; ;;   (cond
+;; ;;    ((not (listp tree)) 0)
+;; ;;    ((null tree) 1)
+;; ;;    (t (1+ (apply #'max 0 (mapcar #'peg--rule-tree-depth tree))))))
 
-(defmacro peg+ (&rest pexs)
-  `(peg ,@(peg--rule-args-add-peg pexs)))
+;; ;; (define-peg-rule+ any-to-eol ()
+;; ;;   (any-to-pex (eol)))
 
-(defmacro peg-run+ (&rest pexs)
-  `(peg-run (peg+ ,@pexs)))
+;; (define-peg-rule+ any-to-eol ()
+;;   (any-to-pex (eol)))
 
-(provide 'peg-macros)
+;; (-difference  '(3 2 4))
+
+;; (defun peg--rule-args-add-peg (pexs &optional macro-args)
+;;   (let (pex-args rule-name rule-params)
+;;     (peg-map-pexs
+;;      (when-let* ((_ (consp it))
+;;                  (name (setq rule-name (car it)))
+;;                  ;; params 是 peg-run 中规则实际使用的参数
+;;                  ;; 没有参数则不用处理
+;;                  (params (setq rule-params (cdr it)))
+;;                  (_ (not (eq name (intern "`"))))
+;;                  ;; 只有自定义的规则的参数才可能需要 peg 包裹
+;;                  (_ (peg-rule-costom-p name))
+;;                  ;; 只有 pex 格式的参数才需要 peg 包裹
+;;                  (plist (peg--rule-arg-plist name))
+;;                  (args (plist-get plist :pex-args))
+;;                  ;; 是pex格式的参数 且 不属于宏参数时，使用 peg 包裹
+;;                  (_ (if macro-args
+;;                         ;; 在使用 define-peg-rule+ 定义规则时，
+;;                         ;; pex参数全部属于宏参数，无需包裹 peg
+;;                         ;; 不属于宏参数的部分，包裹 peg
+;;                         (setq pex-args (-difference args macro-args))
+;;                       ;; 在 peg+ 中，所有 pex 都需要包裹 peg
+;;                       t)))
+;;        t)
+;;      (cons rule-name
+;;            ;; 获取 pex-args 在所有参数中的位置，
+;;            ;; 并给 rule-params 中对应位置的参数加上 peg
+;;            (let ((indexs
+;;                   (--map (-elem-index it (peg-rule-args rule-name))
+;;                          pex-args)))
+;;              (--map-indexed
+;;               (if (and (member it-index indexs))
+;;                   (list 'peg it)
+;;                 it)
+;;               rule-params)))
+;;      pexs)))
+
+;; ;; (defun peg--rule-args-add-peg (pexs)
+;; ;;   (let ((depth (peg--rule-tree-depth pexs)))
+;; ;;     (dotimes (i (1- depth))
+;; ;;       (setq pexs (peg--rule-args-add-peg-1 pexs)))
+;; ;;     pexs))
+
+;; ;; 这三个宏要配合使用:
+;; ;; peg+ 和 peg-run+ 中用到的 自定义规则，必须是由 define-peg-rule+ 定义的
+;; ;; 因为在判断参数是否为 exp 时，需要使用 (peg--rule-arg-plist args pexs) 函数
+;; ;; 该函数的 pexs 为规则定义表达式，在运行 peg-run+ 时需要通过规则的名称来获取
+;; ;; 不允许透传参数
+
+;; ;; FIXME: 排除 action 列表的处理
+;; (defmacro define-peg-rule+ (name args &rest pexs)
+;;   ;; define-peg-rule 如果有参数，参数使用时用 funcall 调用；
+;;   ;; 如果自定义的规则有参数，在所有参数加上 peg 生成 peg-matcher
+;;   (declare (indent defun))
+;;   (function-put (peg-rule-function-name name) :peg-body pexs)
+;;   (let* ((new-pexs (peg--rule-add-funcall name))
+;;          (new-pexs (peg--rule-args-add-peg new-pexs args)))
+;;     `(define-peg-rule ,name ,args
+;;        ,@new-pexs)))
+
+;; (defmacro peg+ (&rest pexs)
+;;   `(peg ,@(peg--rule-args-add-peg pexs)))
+
+;; (defmacro peg-run+ (&rest pexs)
+;;   `(peg-run (peg+ ,@pexs)))
+
+;; (provide 'peg-macros)
