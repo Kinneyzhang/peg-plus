@@ -204,17 +204,36 @@
     (unless (< limit (point))
       `(progn
          (peg-run (peg (group-pex-to (peg ,pex) ,limit)))
-         (let ((data (peg-group-data)))
-           (if data
-               (goto-char (nth 1 (car (last data))))
-             (goto-char ,limit))
-           data)))))
+         (goto-char ,limit)
+         (peg-group-data)))))
 
 ;; 返回所有6500前的 pex 匹配
 (peg-search-forward (and "emacs" [0-9]) 7010)
-;; emacs
-;; emacs1
-(peg-search-forward (and "emacs" [0-9]))
+
+(with-current-buffer "test-peg"
+  (save-excursion
+    (goto-char (point-min))
+    (with-consume-time "peg"
+      (peg-search-forward "emacs")
+      )))
+
+(with-current-buffer "test-peg"
+  (save-excursion
+    (goto-char (point-min))
+    (with-consume-time "regexp"
+      (while (re-search-forward "emacs" nil t)))))
+
+(with-temp-buffer
+  (insert "(a (b (c) (d)))")
+  (goto-char (point-min))
+  (with-peg-rules ((pairs "("  ")")
+                   (pair "(" (* non-parens)  ")")
+                   (non-parens (and (not parens) (any)))
+                   (parens (or "(" ")")))
+    (peg-run (peg pair))
+    ;; (point)
+    ))
+
 ;; (peg-run (peg (group-pex-to (peg (and "emacs" [0-9])) 6888)))
 
 ;; ;; test group all pex before point
