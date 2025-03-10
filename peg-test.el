@@ -163,6 +163,18 @@
 ;;       (list (peg-group-data)
 ;;             (peg-group-beg) (peg-group-end) (peg-group-string))))))
 
+(defun peg-test-group-pex-to ()
+  (should
+   (equal
+    '((15 20 "emacs") 15 20 "emacs")
+    (with-temp-buffer
+      (insert "happy hacking emacs and vim and vscode.")
+      (goto-char (point-min))
+      (peg-run (peg (group-pex-to (peg "emacs") 25)))
+      ;; all groups
+      (list (peg-group-data 1)
+            (peg-group-beg 1) (peg-group-end 1) (peg-group-string 1))))))
+
 (progn
   (peg-test-before)
   (peg-test-until)
@@ -172,21 +184,26 @@
   (peg-test-group-before)
   (peg-test-group-until)
   (peg-test-group-pex)
+  (peg-test-group-pex-to)
   (peg-test-n))
 
 (provide 'peg-test)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmacro peg-search-forward (pex &optional limit num)
+(defmacro peg-search-forward (pex &optional limit)
   "从当前位置到 LIMIT 内搜索 PEX。
 如果能搜索到 PEX，返回 (start . end)，光标移动到 PEX 后面；
 如果匹配不到，返回 nil，光标移动到 PEX 后面。"
   (declare (indent defun))
-  (let ((limit (or limit (point-max))))
+  (let ((limit (if limit
+                   (if (consp limit)
+                       (eval limit)
+                     limit)
+                 (point-max))))
     (unless (< limit (point))
       `(progn
-         (peg-run (peg (group-all-pex (peg ,pex)) (to ,limit)))
+         (peg-run (peg (group-pex-to (peg ,pex) ,limit)))
          (let ((data (peg-group-data)))
            (if data
                (goto-char (nth 1 (car (last data))))
@@ -194,12 +211,22 @@
            data)))))
 
 ;; 返回所有6500前的 pex 匹配
-(peg-search-forward (and "emacs" [0-9]) 6500)
-(peg-run (peg (group-all-pex (peg (and "emacs" [0-9])))
-              ))
+(peg-search-forward (and "emacs" [0-9]) 7010)
+;; emacs
+;; emacs1
+(peg-search-forward (and "emacs" [0-9]))
+;; (peg-run (peg (group-pex-to (peg (and "emacs" [0-9])) 6888)))
 
-(peg-run (peg (group-all-pex (peg (and "emacs" [0-9])))
-              (to 6500)))
+;; ;; test group all pex before point
+;; (peg-run (peg (+ (and (group-pex (peg (and "emacs" [0-9])))
+;;                       (and (guard (< (point) 6758))))
+;;                  )
+;;               ))
+
+;; (peg-run (peg (group-all-pex (peg (and "emacs" [0-9])))
+;;               (to 6500)))
+
+;; (group-pex-to )
 
 ;; emacs1
 

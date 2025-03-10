@@ -1,10 +1,7 @@
 ;; -*- lexical-binding: t -*-
 
-;; (require 'peg-macros)
-
-;;; custom rule
-
 (require 'peg)
+;; (require 'peg-macros)
 (require 'peg-utils)
 
 (with-eval-after-load 'peg
@@ -144,12 +141,13 @@ it in group."
   ;; 从当前位置开始匹配，并捕获 pex
   (before pex) (group pex prop))
 
+(define-peg-rule group-pex-to (pex pos &optional prop)
+  ;; 从当前位置匹配所有 PEX 到 POS 位置为止
+  (+ (and (group-pex pex prop)
+          (guard (< (point) pos)))))
+
 (define-peg-rule group-to (pos &optional prop)
   ;; 匹配任意字符到 pos 位置为止
   (group (peg (to pos)) prop))
-
-(define-peg-rule group-all-pex (pex &optional prop)
-  ;; 从当前位置开始匹配，并捕获 pex
-  (* (group-pex pex prop)))
 
 (provide 'peg-plus)
