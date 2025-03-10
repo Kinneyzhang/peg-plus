@@ -5,6 +5,7 @@
 ;;; custom rule
 
 (require 'peg)
+(require 'peg-utils)
 
 (with-eval-after-load 'peg
   (put 'define-peg-rule 'lisp-indent-function 'defun)
@@ -147,8 +148,8 @@ it in group."
   ;; 匹配任意字符到 pos 位置为止
   (group (peg (to pos)) prop))
 
-;; (define-peg-rule group-all-pex (pex &optional prop)
-;;   ;; 从当前位置开始匹配，并捕获 pex
-;;   (* (group-pex pex prop)))
+(define-peg-rule group-all-pex (pex &optional prop)
+  ;; 从当前位置开始匹配，并捕获 pex
+  (* (group-pex pex prop)))
 
 (provide 'peg-plus)

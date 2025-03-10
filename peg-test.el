@@ -178,7 +178,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmacro peg-search-forward (pex &optional limit)
+(defmacro peg-search-forward (pex &optional limit num)
   "从当前位置到 LIMIT 内搜索 PEX。
 如果能搜索到 PEX，返回 (start . end)，光标移动到 PEX 后面；
 如果匹配不到，返回 nil，光标移动到 PEX 后面。"
@@ -186,41 +186,28 @@
   (let ((limit (or limit (point-max))))
     (unless (< limit (point))
       `(progn
-         (if ,limit
-             (peg-run (peg (group-pex (peg ,pex)) (to ,limit)))
-           (peg-run (peg (group-pex (peg ,pex)))))
-         (let ((data (--map (cons (nth 0 it) (nth 1 it))
-                            (peg-group-data))))
+         (peg-run (peg (group-all-pex (peg ,pex)) (to ,limit)))
+         (let ((data (peg-group-data)))
            (if data
-               (goto-char (cdr (car (last data))))
+               (goto-char (nth 1 (car (last data))))
              (goto-char ,limit))
            data)))))
 
-(defmacro peg-search-forward (pex &optional limit)
-  "从当前位置到 LIMIT 内搜索 PEX。
-如果能搜索到 PEX，返回 (start . end)，光标移动到 PEX 后面；
-如果匹配不到，返回 nil，光标移动到 PEX 后面。"
-  (declare (indent defun))
-  (let ((limit (or limit (point-max))))
-    (unless (< limit (point))
-      `(progn
-         (peg-run (peg (group-pex (peg ,pex)) (to ,limit)))
-         (let ((data (--map (cons (nth 0 it) (nth 1 it))
-                            (peg-group-data))))
-           (if data
-               (goto-char (cdr (car (last data))))
-             (goto-char ,limit))
-           data)))))
+;; 返回所有6500前的 pex 匹配
+(peg-search-forward (and "emacs" [0-9]) 6500)
+(peg-run (peg (group-all-pex (peg (and "emacs" [0-9])))
+              ))
 
-;; (peg-search-forward "emacss" 6800)
+(peg-run (peg (group-all-pex (peg (and "emacs" [0-9])))
+              (to 6500)))
 
-;; emacds1
+;; emacs1
 
 ;; (peg-run (peg
 ;;           (and (group-pex
 ;;                 (peg (and "emacs" [0-9] [0-9])))
 ;;                (to 1))))
-
+;; emacs21
 ;; (progn
 ;;   (peg-run (peg (to 5311)))
 ;;   (point))

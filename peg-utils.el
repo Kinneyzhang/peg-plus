@@ -14,3 +14,5 @@
       (pop plist)
       (push (pop plist) lst))
     (nreverse lst)))
+
+(provide 'peg-utils)
