@@ -125,10 +125,6 @@ it in group."
   (or (+ (and (guard (< (point) pos)) (any)))
       (and (guard (= (point) pos)))))
 
-(define-peg-rule n (point n)
-  ;; match N times any chars, POINT must be (point)
-  (* (and (guard (< (point) (+ point n))) (any))))
-
 (define-peg-rule group-before (pex &optional prop)
   ;; match any chars before pex and group.
   (group (peg (before pex)) prop))
@@ -149,5 +145,9 @@ it in group."
 (define-peg-rule group-to (pos &optional prop)
   ;; 匹配任意字符到 pos 位置为止
   (group (peg (to pos)) prop))
+
+(define-peg-rule n (point n)
+  ;; match N times any chars, POINT must be (point)
+  (* (and (guard (< (point) (+ point n))) (any))))
 
 (provide 'peg-plus)
