@@ -278,3 +278,16 @@
 
 ;; (eval-expression
 ;;  '(peg-run (peg (* (group-pex (peg "emacs"))))))
+
+
+(define-peg-rule test-guard-1 (arg1)
+  (guard (> arg1 5)))
+(peg-run (peg (test-guard-1 6)))
+
+(define-peg-rule test-guard-2 (arg1)
+  (test-guard-1 arg1))
+(peg-run (peg (test-guard-2 6)))
+
+(define-peg-rule test-guard-3 (arg1)
+  (test-guard-2 arg1))
+(peg-run (peg (test-guard-3 1)))
