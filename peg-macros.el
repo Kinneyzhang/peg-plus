@@ -11,9 +11,15 @@
 (defun peg-rule-function-name (name)
   (intern (concat "peg-rule " (symbol-name name))))
 
+(defun peg-rule-customed-p ()
+  "判断规则 NAME 是否为自定义规则"
+  )
+
 (defun peg-rule-built-in-p (name)
   "判断规则 NAME 是否为内置规则"
   (not (functionp (peg-rule-function-name name))))
+
+(functionp (peg-rule-function-name 'not))
 
 (defun peg-rule-costom-p (name)
   "判断规则 NAME 是否为自定义规则"
@@ -44,10 +50,7 @@
                     pex)))
   pex)
 
-;; (peg-map-pexs
-;;  (numberp it)
-;;  (format "%s" it)
-;;  '((1 2 (x y 4) (v 7 8))))
+;;; wrap rule arg with peg if it's a peg matcher
 
 (defmacro peg-map-pexs (pred form pexs)
   "Anaphoric form of `peg--map-pexs'."

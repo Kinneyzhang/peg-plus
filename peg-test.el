@@ -291,3 +291,55 @@
 (define-peg-rule test-guard-3 (arg1)
   (test-guard-2 arg1))
 (peg-run (peg (test-guard-3 1)))
+
+
+(peg-normalize '(and "1" "2"))
+(peg-normalize '(until "emacs" 1))
+
+(define-peg-rule before (pex)
+  ;; match any chars before PEX.
+  (or (and (+ (and (not (funcall pex)) (any)))
+           (not (eob)))
+      ;; if pex is (eob)
+      (and (+ (and (not (funcall pex)) (any)))
+           (eob) (funcall pex))))
+
+(peg-normalize '(before "emacs"))
+
+(define-peg-rule until (pex)
+  ;; match any chars until the end of PEX.
+  (before pex) (funcall pex))
+
+(peg-normalize '(before pex))
+(peg-normalize '(funcall pex))
+(peg-normalize '`( -- "emacs"))
+
+(peg-run (peg (until (peg "emacs"))))
+emacs
+;;; 透传到最后使用 funcall 调用，则需要在 peg-run 中使用 peg包裹
+
+(peg-normalize
+ '(group (before pex) prop))
+
+(peg-normalize
+ '(and `(-- (point)) (funcall pex) `(-- (point))
+       `(start end --
+               (let* ((string (buffer-substring-no-properties start end))
+                      (data (list start end string)))
+                 (setq peg-group-data
+                       (append peg-group-data
+                               (if prop
+                                   ;; plist
+                                   (list prop data)
+                                 ;; cons list
+                                 (list data))))))))
+
+(and (action (let nil (push (point) peg--stack)))
+     (and (funcall pex)
+          (and (action (let nil (push (point) peg--stack)))
+               (action (let ((end (pop peg--stack)) (start (pop peg--stack))) (push (let* ((string (buffer-substring-no-properties start end)) (data (list start end string))) (setq peg-group-data (append peg-group-data (if prop (list prop data) (list data))))) peg--stack))))))
+
+(peg-normalize '(until pex))
+(peg-normalize '(to pos))
+(peg-normalize '(not "emacs"))
+(peg-normalize '(group (until pex) prop))
