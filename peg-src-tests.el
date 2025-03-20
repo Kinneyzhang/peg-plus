@@ -18,3 +18,20 @@
 (fboundp 'oclosure-define)
 (oclosure-define )
 (macroexp-progn body)
+
+(documentation 'oclosure-define)
+
+
+(cl-defmethod cl-print-object ((peg peg-function) stream)
+  (princ "#f<peg " stream)
+  (help-function-arglist peg 'preserve-names)
+  (let ((args ))
+    (if args
+        (prin1 args stream)
+      (princ "()" stream)))
+  )
+
+oclosure-lambda 和 普通的 lambda的区别，什么时候使用
+
+
+(peg-function (pexs (or "1" "2")))
