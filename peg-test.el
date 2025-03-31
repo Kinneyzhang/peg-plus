@@ -315,7 +315,7 @@
 (peg-normalize '`( -- "emacs"))
 
 (peg-run (peg (until (peg "emacs"))))
-emacs
+
 ;;; 透传到最后使用 funcall 调用，则需要在 peg-run 中使用 peg包裹
 
 (peg-normalize
@@ -343,3 +343,5 @@ emacs
 (peg-normalize '(to pos))
 (peg-normalize '(not "emacs"))
 (peg-normalize '(group (until pex) prop))
+
+(peg--translate 'and '"emacs" "vim")

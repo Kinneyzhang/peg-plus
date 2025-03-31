@@ -112,6 +112,28 @@ it in group."
       (and (+ (and (not (funcall pex)) (any)))
            (eob) (funcall pex))))
 
+;; (cl-defmethod peg--translate ((_ (eql any)) )
+;;   '(when (not (eolp))
+;;      (forward-char)
+;;      t))
+
+(peg--translate 'any)
+(peg--translate 'and "emacs" "vim")
+(peg-translate-exp '(and "emacs" "vim"))
+
+(with-temp-buffer
+  ;; (insert "happy hacking emacs and vscode!")
+  (insert "happy hacking vim and vscode!
+happy hacking emacs and vscode!")
+  (goto-char (point-min))
+  (peg-run (peg (before (peg "emacs"))))
+  ;; (point)
+  )
+
+(define-peg-rule group-before (pex &optional prop)
+  ;; match any chars before pex and group.
+  (group (peg (before pex)) prop))
+
 (define-peg-rule until (pex)
   ;; match any chars until the end of PEX.
   (before pex) (funcall pex))
@@ -124,10 +146,6 @@ it in group."
   ;; match any chars to point POS.
   (or (+ (and (guard (< (point) pos)) (any)))
       (and (guard (= (point) pos)))))
-
-(define-peg-rule group-before (pex &optional prop)
-  ;; match any chars before pex and group.
-  (group (peg (before pex)) prop))
 
 (define-peg-rule group-until (pex &optional prop)
   ;; match any chars before pex and group.

@@ -297,8 +297,8 @@ EXPS is a list of rules/expressions that failed.")
     (princ "#f<peg " stream)
     (let ((args (help-function-arglist peg 'preserve-names)))
       (if args
-          (prin1 args stream)
-        (princ "()" stream)))
+          (prin1 args stream)z
+          (princ "()" stream)))
     (princ " " stream)
     (prin1 (peg-function--pexs peg) stream)
     (princ ">" stream)))
