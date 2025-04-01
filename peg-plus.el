@@ -104,22 +104,38 @@ it in group."
                                  ;; cons list
                                  (list data))))))))
 
-(define-peg-rule before (pex)
-  ;; match any chars before PEX.
-  (or (and (+ (and (not (funcall pex)) (any)))
-           (not (eob)))
-      ;; if pex is (eob)
-      (and (+ (and (not (funcall pex)) (any)))
-           (eob) (funcall pex))))
-
 ;; (cl-defmethod peg--translate ((_ (eql any)) )
 ;;   '(when (not (eolp))
 ;;      (forward-char)
 ;;      t))
 
+(defmacro t-ps (pex string)
+  `(with-temp-buffer
+     (save-excursion (insert ,string))
+     (peg-run (peg (and (bob) ,pex (eob))))))
+
 (peg--translate 'any)
-(peg--translate 'and "emacs" "vim")
-(peg-translate-exp '(and "emacs" "vim"))
+(peg--translate 'and '(str "emacs") '(str "vim"))
+(peg-translate-exp '(and (str "emacs") (str "vim")))
+
+peg-leaf-types
+
+(t-ps (and (+ (any)) (if "emacs"))
+      "happy hacking emacs")
+
+(peg-run
+ (save-excursion
+   (or (and (or (when (looking-at '"emacs")
+                  (goto-char (match-end 0)) t)
+                (peg--record-failure '(str "emacs")))
+            (or (when (looking-at '"vim")
+                  (goto-char (match-end 0)) t)
+                (peg--record-failure '(str "vim"))))
+       (peg--record-failure '(and (str "emacs") (str "vim"))))))
+
+emacsvim
+
+(peg-run (peg (+ (any)) "emacs"))
 
 (with-temp-buffer
   ;; (insert "happy hacking emacs and vscode!")
@@ -129,6 +145,43 @@ happy hacking emacs and vscode!")
   (peg-run (peg (before (peg "emacs"))))
   ;; (point)
   )
+
+(define-peg-rule before (pex)
+  ;; 1.当前光标位置为 pex，不移动光标，匹配成功
+  ;; 2.光标后没有匹配的 pex, 不移动光标，匹配失败
+  ;; 3.光标后面有匹配的 pex, 移动光标到 pex之前，匹配成功
+  ;; 需要一个规则判断后续的是否有匹配的，但不移动光标
+  (or
+   (has (funcall pex)) ;; extend to if, do not move cursor if failed
+   (if (funcall pex))
+   (and (+ (and (not (funcall pex)) (any)))
+        (not (eob)))
+   ;; if pex is (eob)
+   (and (+ (and (not (funcall pex)) (any)))
+        (eob) (funcall pex))))
+
+(peg-run (peg (before (peg "emacs"))))
+(peg-run (peg (if (and (* (not "emacs") (any))
+                       "emacs"))))
+
+(peg-run (peg (if (+ (and (not "emacs") (any))))))
+
+(peg-run (peg (if (and (+ (and (not "emacs") (any)))
+                       (if "emacs")))))
+
+(cl-defmethod peg--translate ((_ (eql if)) e)
+  (peg--with-choicepoint cp
+    `(if ,(peg-translate-exp e)
+         (progn
+           ,(peg--choicepoint-restore cp)
+           t)
+       ,(peg--choicepoint-restore cp)
+       nil)))
+
+;; (cl-defmethod peg--translate ((_ (eql any)) &optional n)
+;;   `(when (not (eobp))
+;;      (forward-char ,(or n 1))
+;;      t))
 
 (define-peg-rule group-before (pex &optional prop)
   ;; match any chars before pex and group.
@@ -168,4 +221,11 @@ happy hacking emacs and vscode!")
   ;; match N times any chars, POINT must be (point)
   (* (and (guard (< (point) (+ point n))) (any))))
 
+(defun peg-eval (&optional pex)
+  (interactive "sInput PEX: ")
+  (eval-expression
+   `(peg-run (peg ,(car (read-from-string pex))))))
+
 (provide 'peg-plus)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

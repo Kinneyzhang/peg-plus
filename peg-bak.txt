@@ -313,7 +313,7 @@ EXPS is a list of rules/expressions that failed.")
 ;; Sometimes (with-peg-rules ... (peg-run (peg ...))) is too
 ;; long-winded for the task at hand, so `peg-parse' comes in handy.
 (defmacro peg-parse (&rest pexs)
-  "Match PEXS at point.
+  "Match PEXS at point. 
 PEXS is a sequence of PEG expressions, implicitly combined with `and'.
 Returns STACK if the match succeed and signals an error on failure,
 moving point along the way."
@@ -670,6 +670,7 @@ rulesets defined previously with `define-peg-ruleset'."
 
 (define-obsolete-function-alias 'peg-record-failure
   #'peg--record-failure "peg-1.0")
+
 (defun peg--record-failure (exp)
   (cond ((= (point) (car peg--errors))
 	     (setcdr peg--errors (cons exp (cdr peg--errors))))
