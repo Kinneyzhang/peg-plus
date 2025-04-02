@@ -177,6 +177,11 @@ happy hacking emacs and vscode!")
        (cl-incf cnt))
      (if (<= m cnt n) t nil))))
 
+(define-peg-rule has (rule)
+  (guard
+   (save-excursion
+     ())))
+
 (t-ps (Qu (peg " ") 3 5) "      ") ;;=> nil
 (t-ps (Qu (peg " ") 1 2) " ") ;;=> t
 (t-ps (Qu (peg " ") 1 2) "  ") ;;=> t
