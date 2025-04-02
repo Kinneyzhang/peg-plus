@@ -109,11 +109,6 @@ it in group."
 ;;      (forward-char)
 ;;      t))
 
-(defmacro t-ps (pex string)
-  `(with-temp-buffer
-     (save-excursion (insert ,string))
-     (peg-run (peg (and (bob) ,pex (eob))))))
-
 (peg--translate 'any)
 (peg--translate 'and '(str "emacs") '(str "vim"))
 (peg-translate-exp '(and (str "emacs") (str "vim")))
@@ -169,16 +164,25 @@ happy hacking emacs and vscode!")
 (peg-run (peg (if (and (+ (and (not "emacs") (any)))
                        (if "emacs")))))
 
-(cl-defmethod peg--translate ((_ (eql if)) e)
-  (peg--with-choicepoint cp
-    `(if ,(peg-translate-exp e)
-         (progn
-           ,(peg--choicepoint-restore cp)
-           t)
-       ,(peg--choicepoint-restore cp)
-       nil)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmacro t-ps (pex string)
+  `(with-temp-buffer
+     (save-excursion (insert ,string))
+     (peg-run (peg (and (bob) ,pex (eob))))))
 
-;; (cl-defmethod peg--translate ((_ (eql any)) &optional n)
+(define-peg-rule Qu (rule m n)
+  (guard
+   (let ((cnt 0))
+     (while (and (< cnt n) (funcall rule))
+       (cl-incf cnt))
+     (if (<= m cnt n) t nil))))
+
+(t-ps (Qu (peg " ") 3 5) "      ") ;;=> nil
+(t-ps (Qu (peg " ") 1 2) " ") ;;=> t
+(t-ps (Qu (peg " ") 1 2) "  ") ;;=> t
+(t-ps (Qu (peg " ") 1 2) "   ") ;;=> nil
+
+;; (cl-defmethod peg--translate ((_ (eql   any)) &optional n)
 ;;   `(when (not (eobp))
 ;;      (forward-char ,(or n 1))
 ;;      t))
