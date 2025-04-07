@@ -177,15 +177,21 @@ happy hacking emacs and vscode!")
        (cl-incf cnt))
      (if (<= m cnt n) t nil))))
 
-(define-peg-rule has (rule)
-  (guard
-   (save-excursion
-     ())))
-
 (t-ps (Qu (peg " ") 3 5) "      ") ;;=> nil
 (t-ps (Qu (peg " ") 1 2) " ") ;;=> t
 (t-ps (Qu (peg " ") 1 2) "  ") ;;=> t
 (t-ps (Qu (peg " ") 1 2) "   ") ;;=> nil
+
+(define-peg-rule loop (rule n)
+  (guard
+   (let ((cnt 0))
+     (while (and (< cnt n) (funcall rule))
+       (cl-incf cnt))
+     (if (>= cnt n) t nil))))
+
+(peg-run (peg (loop (peg "emacs") 2)))
+
+emacsemacsemacsemacs
 
 ;; (cl-defmethod peg--translate ((_ (eql   any)) &optional n)
 ;;   `(when (not (eobp))
