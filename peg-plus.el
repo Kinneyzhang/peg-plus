@@ -188,4 +188,14 @@ The matched data are stored in `peg-group-data'."
      (setq peg-group-data data)
      (and data t)))
 
+(defmacro with-peg-search (pex limit &rest body)
+  "The same to `peg-search', but eval BODY when matched."
+  `(let ((limit (or ,limit (point-max)))
+         data)
+     (while (peg-search-forward ,pex limit)
+       ,@body
+       (setq data (append data peg-group-data)))
+     (setq peg-group-data data)
+     (and data t)))
+
 (provide 'peg-plus)
