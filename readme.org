@@ -24,7 +24,7 @@ Peg-plus provides more useful peg rules and funtions.
 | peg-string         | string, pex | Return if STRING match PEX.                                    |
 | peg-run+           | pexs        | Like peg-run, but do not move cursor if search failed.         |
 | peg-search-forward | pex, limit  | Search PEX before point LIMIT, and set the first matched data. |
-| peg-search         |             | Search all PEXs before point LIMIT and set all matched data.   |
+| peg-search         | pex, limit  | Search all PEXs before point LIMIT and set all matched data.   |
 
 
 
