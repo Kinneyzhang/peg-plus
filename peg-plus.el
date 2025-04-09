@@ -88,6 +88,8 @@ it in group."
       (nth 2 data))))
 
 (define-peg-rule group (pex &optional prop)
+  ;; group PEX and set match data in `peg-group-data'
+  ;; if PROP is non-nil, get match data by PROP, otherwise by number
   (and `(-- (point)) (funcall pex) `(-- (point))
        `(start end --
                (let* ((string (buffer-substring-no-properties start end))
@@ -101,6 +103,16 @@ it in group."
                                  (list data))))))))
 
 ;;; peg group ends here
+
+;;; other customized peg rules
+
+(define-peg-rule pair (left right)
+  ;; match recursive structure
+  (funcall left)
+  (* (or (and (if (funcall left))
+              (pair left right))
+	     (and (not (funcall right)) (any))))
+  (funcall right))
 
 (define-peg-rule loop (pex n)
   ;; match N pex
@@ -128,12 +140,21 @@ it in group."
   (before pex) (funcall pex))
 
 (define-peg-rule match (pex)
+  ;; match PEX and set match data, like `re-search-forward'
   (before pex) (group pex))
 
 (define-peg-rule any-to (pos)
   ;; match any chars to point POS.
   (* (and (guard (< (point) pos)) (any)))
   (guard (= (point) pos)))
+
+;;; other customized peg rules ends here
+
+(defun peg-eval (&optional pex)
+  "Eval peg expression from minibuffer."
+  (interactive "sEval PEX: ")
+  (eval-expression
+   `(peg-run+ ,(car (read-from-string pex)))))
 
 (defmacro peg-string (string pex)
   "Return if STRING match PEX."
@@ -142,31 +163,29 @@ it in group."
      (peg-run (peg (and (bob) ,pex (eob))))))
 
 (defmacro peg-run+ (&rest pexs)
-  "Do not move cursor if search failed."
+  "Like peg-run, but do not move cursor if search failed."
   `(let ((start (point)))
      (if (peg-run (peg ,@pexs))
          t
        (goto-char start)
        nil)))
 
-(defmacro peg-search-forward (pex)
-  "Search PEX in current buffer and return all matched data."
-  `(peg-run+ (match (peg ,pex))))
+(defmacro peg-search-forward (pex &optional limit)
+  "Search PEX in current buffer before point LIMIT,
+and set the first matched data.
+The matched data are stored in `peg-group-data'."
+  `(let ((limit (or ,limit (point-max))))
+     (peg-run+ (match (peg ,pex))
+               (if (any-to limit)))))
 
 (defmacro peg-search (pex &optional limit)
-  (let ((limit (or limit (point-max))))
-    (while (< (point) limit)
-      (peg-search-forward pex))))
-
-;; (progn
-;;   (peg-search "emacs" 5287)
-;;   (peg-group-string 1))
-
-;; (setq peg-group-data nil)
-
-;; (peg-run+ (match (peg "emacs")))
+  "Search all PEXs before point LIMIT and set all matched data.
+The matched data are stored in `peg-group-data'."
+  `(let ((limit (or ,limit (point-max)))
+         data)
+     (while (peg-search-forward ,pex limit)
+       (setq data (append data peg-group-data)))
+     (setq peg-group-data data)
+     (and data t)))
 
 (provide 'peg-plus)
-;; emacs
-;; vim
-;; vscode

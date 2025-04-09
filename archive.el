@@ -1,9 +1,7 @@
 ;; -*- lexical-binding: t -*-
 
 (require 'peg)
-(require 'dash)
-
-;;; FIXME: 处理参数名可能和规则同名的问题
+(require 'peg-utils)
 
 (defun peg-rule-action-p (name)
   (eq name (intern "`")))
@@ -167,4 +165,32 @@
 (defmacro peg-run+ (&rest pexs)
   `(peg-run (peg+ ,@pexs)))
 
-(provide 'peg-macros)
+;; emacs
+(define-peg-rule group-before (pex &optional prop)
+  ;; match any chars before pex and group.
+  (group (peg (before pex)) prop))
+
+(define-peg-rule before-point (pex pos)
+  ;; search PEX before point POS.
+  (until pex) (to pos))
+
+(define-peg-rule group-until (pex &optional prop)
+  ;; match any chars before pex and group.
+  (group (peg (until pex)) prop))
+
+(define-peg-rule group-pex (pex &optional prop)
+  ;; 从当前位置开始匹配，并捕获 pex
+  (before pex) (group pex prop))
+
+(define-peg-rule group-pex-to (pex pos &optional prop)
+  ;; 从当前位置匹配所有 PEX 到 POS 位置为止
+  (+ (and (group-pex pex prop)
+          (guard (< (point) pos)))))
+
+(define-peg-rule group-to (pos &optional prop)
+  ;; 匹配任意字符到 pos 位置为止
+  (group (peg (to pos)) prop))
+
+(provide 'peg-plus)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
