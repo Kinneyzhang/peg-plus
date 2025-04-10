@@ -141,7 +141,15 @@ it in group."
 
 (define-peg-rule match (pex)
   ;; match PEX and set match data, like `re-search-forward'
+  ;; pex should not be match nil
   (before pex) (group pex))
+
+;;; FIXME: consider PEX is a not match
+;; (define-peg-rule match (pex)
+;;   ;; match PEX and set match data, like `re-search-forward'
+;;   ;; pex should not be match nil
+;;   (and (if (funcall pex))
+;;        (and (before pex) (group pex))))
 
 (define-peg-rule any-to (pos)
   ;; match any chars to point POS.
@@ -175,6 +183,7 @@ it in group."
 and set the first matched data.
 The matched data are stored in `peg-group-data'."
   `(let ((limit (or ,limit (point-max))))
+     ;; FIXME 考虑不匹配的情况
      (peg-run+ (match (peg ,pex))
                (if (any-to limit)))))
 
@@ -190,6 +199,7 @@ The matched data are stored in `peg-group-data'."
 
 (defmacro with-peg-search (pex limit &rest body)
   "The same to `peg-search', but eval BODY when matched."
+  (declare (indent defun))
   `(let ((limit (or ,limit (point-max)))
          data)
      (while (peg-search-forward ,pex limit)
